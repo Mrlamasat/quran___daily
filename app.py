@@ -108,3 +108,4 @@ def logout():
 
 if __name__ == "__main__":
     app.run(debug=True)
+app = app # تأكد أن هذا السطر موجود في نهاية الملف
