@@ -1,0 +1,73 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+    <meta charset="UTF-8">
+    <title>لوحة التحكم</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+</head>
+<body class="bg-light text-end">
+    <div class="container py-4">
+        <h2 class="text-center border-bottom pb-3">إدارة الورد اليومي</h2>
+        
+        <div class="card my-4 p-3 shadow-sm">
+            <h5>إضافة عضو جديد</h5>
+            <form method="POST" class="row g-2">
+                <input type="hidden" name="add_user">
+                <div class="col-md-4"><input type="text" name="name" class="form-control" placeholder="الاسم" required></div>
+                <div class="col-md-3"><input type="text" name="phone" class="form-control" placeholder="رقم الهاتف" required></div>
+                <div class="col-md-3"><input type="text" name="password" class="form-control" placeholder="رمز التحقق" required></div>
+                <div class="col-md-2"><button class="btn btn-success w-100">إضافة</button></div>
+            </form>
+        </div>
+
+        <div class="card p-3 shadow-sm mb-4 border-primary">
+            <h5>تخصيص الورد (أجزاء مسبقة)</h5>
+            <form method="POST" class="row g-2">
+                <input type="hidden" name="assign">
+                <div class="col-md-4">
+                    <select name="user_id" class="form-select">
+                        {% for u in users %}<option value="{{u.id}}">{{u.name}}</option>{% endfor %}
+                    </select>
+                </div>
+                <div class="col-md-4">
+                    <select id="surahSelect" name="surah" class="form-select" onchange="updateParts()">
+                        <option value="">اختر السورة...</option>
+                        {% for s in parts.keys() %}<option value="{{s}}">{{s}}</option>{% endfor %}
+                    </select>
+                </div>
+                <div class="col-md-4">
+                    <select id="partSelect" name="part_index" class="form-select" required></select>
+                </div>
+                <button class="btn btn-primary mt-3">حفظ الورد للعضو</button>
+            </form>
+        </div>
+
+        <h5>متابعة تقدم الجميع</h5>
+        <table class="table bg-white shadow-sm rounded">
+            <thead><tr><th>العضو</th><th>السورة</th><th>الحالة</th></tr></thead>
+            <tbody>
+                {% for p in progress %}
+                <tr><td>{{p.name}}</td><td>{{p.surah}}</td><td>{{ '✅ تم' if p.done else '⏳ جاري' }}</td></tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+
+    <script>
+        const partsData = {{ parts|tojson }};
+        function updateParts() {
+            const surah = document.getElementById('surahSelect').value;
+            const partSelect = document.getElementById('partSelect');
+            partSelect.innerHTML = '';
+            if(surah) {
+                partsData[surah].forEach((p, index) => {
+                    let opt = document.createElement('option');
+                    opt.value = index;
+                    opt.innerHTML = p.text;
+                    partSelect.appendChild(opt);
+                });
+            }
+        }
+    </script>
+</body>
+</html>
