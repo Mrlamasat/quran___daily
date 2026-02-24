@@ -1,104 +1,113 @@
-# --- البيانات النهائية لمشروعك ---
-SUPABASE_URL = "https://wwiktewpowjuhjtpzpeu.supabase.co"
-SUPABASE_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Ind3aWt0ZXdwb3dqdWhqdHB6cGV1Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzE5MDIyMjEsImV4cCI6MjA4NzQ3ODIyMX0.TV2pmWxGZR4AvkjqYA1I_q0dZSSQPy-xxll1Mo1HxnU"
-# -------------------------------
-
 import os
-from flask import Flask, render_template, request, redirect, session, url_for
+from flask import Flask, render_template, request, redirect, url_for, session, flash
 from supabase import create_client, Client
+from datetime import datetime
 
 app = Flask(__name__)
-app.secret_key = "mohammed_almohsen_2026"
+app.secret_key = "quran_daily_secret_key"
 
-# --- استبدل هذه البيانات من حسابك في Supabase ---
-SUPABASE_URL = "رابط_مشروعك_هنا"
-SUPABASE_KEY = "مفتاح_API_الخاص_بك_هنا"
+# --- إعدادات Supabase الخاصة بك ---
+SUPABASE_URL = "https://wwiktewpowjuhjtpzpeu.supabase.co"
+SUPABASE_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Ind3aWt0ZXdwb3dqdWhqdHB6cGV1Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzE5MDIyMjEsImV4cCI6MjA4NzQ3ODIyMX0.TV2pmWxGZR4AvkjqYA1I_q0dZSSQPy-xxll1Mo1HxnU"
+
 supabase: Client = create_client(SUPABASE_URL, SUPABASE_KEY)
 
+# --- بيانات المسؤول (Admin) ---
+ADMIN_USERNAME = "admin"
 ADMIN_PASSWORD = "0639296170"
 
-# بيانات السور والأجزاء
-SURAH_PARTS = {
-    "البقرة": [
-        {"id": 0, "text": "الجزء 1 (آية 1-141)", "from": 1, "to": 141},
-        {"id": 1, "text": "الجزء 2 (آية 142-252)", "from": 142, "to": 252},
-    ],
-    "آل عمران": [
-        {"id": 0, "text": "الجزء 3 (آية 1-200)", "from": 1, "to": 200},
-    ]
-}
+# --- المسارات (Routes) ---
 
-@app.route("/")
-def home():
-    if "user_id" in session:
-        return redirect(url_for("daily"))
-    return redirect(url_for("login"))
+@app.route('/')
+def index():
+    if 'user' in session:
+        if session['user'] == ADMIN_USERNAME:
+            return redirect(url_for('admin_dashboard'))
+        return redirect(url_for('user_dashboard'))
+    return render_template('login.html')
 
-@app.route("/login", methods=["GET", "POST"])
+@app.route('/login', methods=['POST'])
 def login():
-    if request.method == "POST":
-        u = request.form.get("username")
-        p = request.form.get("password")
-        
-        # دخول المسؤول
-        if u == "admin" and p == ADMIN_PASSWORD:
-            session["admin"] = True
-            return redirect(url_for("admin"))
-        
-        # دخول الأعضاء من Supabase
-        user_query = supabase.table("users").select("*").eq("phone", u).eq("password", p).execute()
-        if user_query.data:
-            session["user_id"] = user_query.data[0]['id']
-            session["user_name"] = user_query.data[0]['name']
-            return redirect(url_for("daily"))
-            
-    return render_template("login.html")
+    username = request.form.get('username')
+    password = request.form.get('password')
 
-@app.route("/admin", methods=["GET", "POST"])
-def admin():
-    if "admin" not in session:
-        return redirect(url_for("login"))
+    # تسجيل دخول المسؤول
+    if username == ADMIN_USERNAME and password == ADMIN_PASSWORD:
+        session['user'] = ADMIN_USERNAME
+        return redirect(url_for('admin_dashboard'))
+
+    # تسجيل دخول المستخدمين من قاعدة البيانات
+    response = supabase.table('users').select("*").eq('username', username).eq('password', password).execute()
     
-    if request.method == "POST":
-        if "add_user" in request.form:
-            supabase.table("users").insert({
-                "name": request.form["name"],
-                "phone": request.form["phone"],
-                "password": request.form["password"]
-            }).execute()
-        elif "assign" in request.form:
-            surah = request.form["surah"]
-            p_idx = int(request.form["part_index"])
-            part_data = SURAH_PARTS[surah][p_idx]
-            supabase.table("daily").insert({
-                "user_id": request.form["user_id"],
-                "surah": surah,
-                "from_ayah": part_data["from"],
-                "to_ayah": part_data["to"],
-                "done": 0
-            }).execute()
-
-    users = supabase.table("users").select("*").execute()
-    progress = supabase.table("daily").select("*, users(name)").execute()
-    return render_template("admin.html", users=users.data, progress=progress.data, parts=SURAH_PARTS)
-
-@app.route("/daily", methods=["GET", "POST"])
-def daily():
-    if "user_id" not in session:
-        return redirect(url_for("login"))
+    if response.data:
+        session['user'] = username
+        return redirect(url_for('user_dashboard'))
     
-    uid = session["user_id"]
-    if request.method == "POST":
-        task_id = request.form.get("task_id")
-        supabase.table("daily").update({"done": 1}).eq("id", task_id).execute()
-    
-    tasks = supabase.table("daily").select("*").eq("user_id", uid).execute()
-    return render_template("daily.html", tasks=tasks.data, name=session.get("user_name"))
+    flash("خطأ في اسم المستخدم أو كلمة المرور")
+    return redirect(url_for('index'))
 
-@app.route("/logout")
+@app.route('/admin')
+def admin_dashboard():
+    if session.get('user') != ADMIN_USERNAME:
+        return redirect(url_for('index'))
+    
+    users = supabase.table('users').select("*").execute().data
+    return render_template('admin.html', users=users)
+
+@app.route('/add_user', methods=['POST'])
+def add_user():
+    if session.get('user') != ADMIN_USERNAME:
+        return redirect(url_for('index'))
+    
+    name = request.form.get('name')
+    username = request.form.get('username')
+    password = request.form.get('password')
+    phone = request.form.get('phone')
+
+    supabase.table('users').insert({
+        "name": name, 
+        "username": username, 
+        "password": password, 
+        "phone": phone
+    }).execute()
+    
+    flash("تم إضافة العضو بنجاح")
+    return redirect(url_for('admin_dashboard'))
+
+@app.route('/dashboard')
+def user_dashboard():
+    if 'user' not in session or session['user'] == ADMIN_USERNAME:
+        return redirect(url_for('index'))
+    
+    username = session['user']
+    user_data = supabase.table('users').select("*").eq('username', username).single().execute().data
+    tasks = supabase.table('daily').select("*").eq('username', username).order('date', desc=True).execute().data
+    
+    return render_template('dashboard.html', user=user_data, tasks=tasks)
+
+@app.route('/update_task', methods=['POST'])
+def update_task():
+    if 'user' not in session:
+        return redirect(url_for('index'))
+    
+    username = session['user']
+    task_content = request.form.get('task')
+    date_today = datetime.now().strftime('%Y-%m-%d')
+
+    # تحديث أو إدخال ورد اليوم
+    supabase.table('daily').upsert({
+        "username": username,
+        "date": date_today,
+        "task": task_content
+    }).execute()
+    
+    flash("تم تحديث الورد اليومي")
+    return redirect(url_for('user_dashboard'))
+
+@app.route('/logout')
 def logout():
-    session.clear()
-    return redirect(url_for("login"))
+    session.pop('user', None)
+    return redirect(url_for('index'))
 
-# سطر مهم جداً لـ Vercel
-app = app
+if __name__ == '__main__':
+    app.run(debug=True)
