@@ -1,3 +1,8 @@
+# --- البيانات النهائية لمشروعك ---
+SUPABASE_URL = "https://wwiktewpowjuhjtpzpeu.supabase.co"
+SUPABASE_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Ind3aWt0ZXdwb3dqdWhqdHB6cGV1Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzE5MDIyMjEsImV4cCI6MjA4NzQ3ODIyMX0.TV2pmWxGZR4AvkjqYA1I_q0dZSSQPy-xxll1Mo1HxnU"
+# -------------------------------
+
 import os
 from flask import Flask, render_template, request, redirect, session, url_for
 from supabase import create_client, Client
